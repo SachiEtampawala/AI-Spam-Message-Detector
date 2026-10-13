@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# Machine learning models
+models/*.pkl
+
+# Local datasets
+data/SMSSpamCollection
+data/sms_spam.csv
+
+# Environment variables
+.env
+
+# IDE settings
+.vscode/
