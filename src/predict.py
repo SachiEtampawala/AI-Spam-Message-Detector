@@ -2,7 +2,7 @@ import joblib
 
 from pathlib import Path
 
-# 1. Locate the saved model
+# 1. Locate the trained model
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 
 MODEL_PATH = PROJECT_DIR / "models" / "spam_model.pkl"
@@ -18,27 +18,35 @@ def load_model():
 
     return joblib.load(MODEL_PATH)
 
-# 3. Predict a message
-def predict_message(message):
+# 3. Predict a message using an adjustable threshold
+def predict_message(message, model, threshold=0.50):
 
     if not isinstance(message, str):
-        raise TypeError("Message must be a string.")
+        raise TypeError(
+            "Message must be a string."
+        )
 
     message = message.strip()
 
     if not message:
-        raise ValueError("Please enter a message to analyze.")
+        raise ValueError(
+            "Please enter a message."
+        )
 
-    model = load_model()
+    if not 0.0 <= threshold <= 1.0:
+        raise ValueError(
+            "Threshold must be between 0 and 1."
+        )
 
-    # Predict the message category.
-    prediction = model.predict([message])[0]
-
-    # Get probabilities for both classes.
+    # Get the model's probability estimates.
     probabilities = model.predict_proba([message])[0]
 
-    # Find the probability belonging to each class.
     classes = list(model.classes_)
+
+    if "spam" not in classes or "ham" not in classes:
+        raise ValueError(
+            "The model must support both spam and ham classes."
+        )
 
     spam_probability = float(
         probabilities[classes.index("spam")]
@@ -48,8 +56,15 @@ def predict_message(message):
         probabilities[classes.index("ham")]
     )
 
+    # Apply the user-selected threshold.
+    if spam_probability >= threshold:
+        prediction = "spam"
+    else:
+        prediction = "ham"
+
     return {
         "prediction": prediction,
         "spam_probability": spam_probability,
-        "ham_probability": ham_probability
+        "ham_probability": ham_probability,
+        "threshold": threshold
     }
