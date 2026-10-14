@@ -1,47 +1,55 @@
 import joblib
+
 from pathlib import Path
 
-# Locate the trained model
+# 1. Locate the saved model
 PROJECT_DIR = Path(__file__).resolve().parent.parent
+
 MODEL_PATH = PROJECT_DIR / "models" / "spam_model.pkl"
 
+# 2. Load the trained pipeline
 def load_model():
-    """Load the trained model and text vectorizer."""
 
     if not MODEL_PATH.exists():
         raise FileNotFoundError(
-            "Trained model not found. "
-            "Please run src/train_model.py first."
+            "Trained model not found.\n"
+            "Please run: python src/train_model.py"
         )
 
-    saved_objects = joblib.load(MODEL_PATH)
+    return joblib.load(MODEL_PATH)
 
-    return saved_objects["model"], saved_objects["vectorizer"]
+# 3. Predict a message
+def predict_message(message):
 
-def predict_message(message, model, vectorizer):
-    """Classify a message as spam or ham."""
+    if not isinstance(message, str):
+        raise TypeError("Message must be a string.")
 
     message = message.strip()
 
     if not message:
-        raise ValueError("Please enter a message.")
+        raise ValueError("Please enter a message to analyze.")
 
-    message_features = vectorizer.transform([message])
+    model = load_model()
 
-    prediction = model.predict(message_features)[0]
+    # Predict the message category.
+    prediction = model.predict([message])[0]
 
-    probabilities = model.predict_proba(message_features)[0]
+    # Get probabilities for both classes.
+    probabilities = model.predict_proba([message])[0]
 
-    probability_by_label = dict(
-        zip(model.classes_, probabilities)
+    # Find the probability belonging to each class.
+    classes = list(model.classes_)
+
+    spam_probability = float(
+        probabilities[classes.index("spam")]
+    )
+
+    ham_probability = float(
+        probabilities[classes.index("ham")]
     )
 
     return {
         "prediction": prediction,
-        "spam_probability": float(
-            probability_by_label.get("spam", 0.0)
-        ),
-        "ham_probability": float(
-            probability_by_label.get("ham", 0.0)
-        )
+        "spam_probability": spam_probability,
+        "ham_probability": ham_probability
     }
