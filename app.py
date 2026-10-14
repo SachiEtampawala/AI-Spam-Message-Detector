@@ -2,14 +2,14 @@ import streamlit as st
 
 from src.predict import load_model, predict_message
 
-# Page configuration
+# 1. Page configuration
 st.set_page_config(
     page_title="AI Spam Detector",
     page_icon="🛡️",
     layout="centered"
 )
 
-# Custom styling
+# 2. Styling
 st.markdown(
     """
     <style>
@@ -30,18 +30,12 @@ st.markdown(
         color: #CBD5E1;
         font-size: 16px;
     }
-
-    .result-box {
-        padding: 20px;
-        border-radius: 12px;
-        margin-top: 15px;
-    }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# Application heading
+# 3. Application heading
 st.markdown(
     '<div class="main-title">AI Spam Detector</div>',
     unsafe_allow_html=True
@@ -57,39 +51,66 @@ st.markdown(
 st.write("")
 
 st.info(
-    "Enter an SMS message below to check whether "
-    "our machine learning model classifies it as spam."
+    "Enter a message and adjust the detection threshold "
+    "to explore the trade-off between detecting spam "
+    "and avoiding false alarms."
 )
 
-# Load the trained model
+# 4. Load the trained model
 try:
-    model, vectorizer = load_model()
+    model = load_model()
 
 except FileNotFoundError:
     st.error(
         "The trained model was not found. "
-        "Please run: python src/train_model.py"
+        "Run: python src/train_model.py"
     )
     st.stop()
 
-# Message input
+# 5. Threshold control
+threshold = st.slider(
+    "Spam detection threshold",
+    min_value=0.10,
+    max_value=0.90,
+    value=0.50,
+    step=0.05,
+    help=(
+        "A lower threshold flags more messages as spam. "
+        "A higher threshold requires stronger model evidence."
+    )
+)
+
+st.caption(
+    f"Current threshold: {threshold:.0%}. "
+    "A message is classified as spam when its estimated "
+    "spam probability is greater than or equal to this value."
+)
+
+# 6. Message input
 message = st.text_area(
     "Enter your message",
-    placeholder="Paste your SMS message here...",
+    placeholder="Paste your SMS or security alert here...",
     height=150
 )
 
-# Analyze button
-if st.button("Analyze Message", use_container_width=True):
+# 7. Analyze the message
+if st.button(
+    "Analyze Message",
+    use_container_width=True
+):
 
     if not message.strip():
-        st.warning("Please enter a message first.")
+
+        st.warning(
+            "Please enter a message first."
+        )
 
     else:
+
         result = predict_message(
             message,
             model,
-            vectorizer
+            threshold=threshold
         )
 
         prediction = result["prediction"]
@@ -100,14 +121,19 @@ if st.button("Analyze Message", use_container_width=True):
         st.subheader("Analysis Result")
 
         if prediction == "spam":
-            st.error("⚠️ The model classified this message as SPAM.")
 
-        else:
-            st.success(
-                "✅ The model classified this message as HAM "
-                "(legitimate)."
+            st.error(
+                "⚠️ The model classified this message as SPAM."
             )
 
+        else:
+
+            st.success(
+                "✅ The model classified this message as "
+                "HAM (legitimate)."
+            )
+
+        # Probability metrics.
         col1, col2 = st.columns(2)
 
         with col1:
@@ -118,19 +144,40 @@ if st.button("Analyze Message", use_container_width=True):
 
         with col2:
             st.metric(
-                "Ham probability",
+                "Legitimate probability",
                 f"{ham_probability:.1%}"
             )
 
-        st.caption(
-            "These are model-estimated probabilities, not "
-            "proof that a message is malicious or safe."
+        # Show the selected threshold.
+        st.write(
+            f"**Classification threshold:** {threshold:.0%}"
         )
 
-# Footer
+        # Show the difference between probability and threshold.
+        if spam_probability >= threshold:
+
+            st.write(
+                "The spam probability meets or exceeds "
+                "the selected threshold."
+            )
+
+        else:
+
+            st.write(
+                "The spam probability is below "
+                "the selected threshold."
+            )
+
+        st.caption(
+            "This model was trained on an SMS spam dataset. "
+            "It has not been validated as a standalone phishing "
+            "or security-alert detection system. Never rely on "
+            "its result alone to decide whether a message is safe."
+        )
+
+# 8. Footer
 st.divider()
 
 st.caption(
-    "AI Spam Detector | Built with Python, "
-    "Scikit-learn and Streamlit"
+    "AI Spam Detector | Python, Scikit-learn and Streamlit"
 )
